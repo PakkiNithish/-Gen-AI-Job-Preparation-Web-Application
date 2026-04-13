@@ -567,59 +567,379 @@ async function enhanceResumeData(extractedData, jobDescription, selfDescription,
 // - Keep formatting clean and consistent
 // - No markdown, no explanations
 // `;
-    const prompt = `
-        You are an ATS resume optimizer.
+//     const prompt = `
+//         You are an ATS resume optimizer.
 
-Your task:
-Improve resume content but DO NOT design layout.
+// Your task:
+// Improve resume content but DO NOT design layout.
 
-Return ONLY valid JSON matching this EXACT structure.
-Do not add fields. Do not remove fields.
+// Return ONLY valid JSON matching this EXACT structure.
+// Do not add fields. Do not remove fields.
 
-IMPORTANT:
-This JSON will be rendered using a fixed ATS resume template.
-Only improve wording and keyword optimization.
+// IMPORTANT:
+// This JSON will be rendered using a fixed ATS resume template.
+// Only improve wording and keyword optimization.
 
-Input Resume JSON:
-${JSON.stringify(extractedData, null, 2)}
+// Input Resume JSON:
+// ${JSON.stringify(extractedData, null, 2)}
 
-Job Description:
-${jobDescription || "Not provided"}
+// Job Description:
+// ${jobDescription || "Not provided"}
 
-Self Description:
-${selfDescription || "Not provided"}
+// Self Description:
+// ${selfDescription || "Not provided"}
 
-Rules:
+// Rules:
 
-* Return ONLY JSON
-* Keep exact structure
-* No markdown
-* No explanations
-* No new sections
-* No fake experience
-* No special formatting
+// * Return ONLY JSON
+// * Keep exact structure
+// * No markdown
+// * No explanations
+// * No new sections
+// * No fake experience
+// * No special formatting
 
-Content Rules:
+// Content Rules:
 
-Summary:
+// Summary:
 
-* 3–4 lines
-* Include job description keywords
-* Professional tone
+// * 3–4 lines
+// * Include job description keywords
+// * Professional tone
 
-Experience / Projects:
-Rewrite bullets using:
-Action Verb + Task + Tech + Impact
+// Experience / Projects:
+// Rewrite bullets using:
+// Action Verb + Task + Tech + Impact
 
-Skills:
+// Skills:
 
-* Reorder based on job description relevance
-* Keep same skills only
+// * Reorder based on job description relevance
+// * Keep same skills only
 
-Output:
-Return ONLY JSON
+// Output:
+// Return ONLY JSON
+//     `
+// Store the LaTeX template as a separate string to avoid escaping issues
+    const getLatexTemplate = (data) => {
+    const {
+    name = "",
+    phone = "",
+    email = "",
+    linkedin = "",
+    github = "",
+    city = "",
+    education = [],
+    skills = [],
+    projects = [],
+    internships = [],
+    languages = "",
+    tools = "",
+    frameworks = "",
+    extracurricular = [],
+    certifications = [],
+    } = data;
+
+    const edu = education[0] || {};
+    const edu2 = education[1] || {};
+
+    const projectsLatex = projects
+    .map(
+        (p) => `
+    \\resumeProjectHeading
+    {\\textbf{\\large{\\underline{${p.name}}}} \\href{${p.url || "#"}}{\\raisebox{-0.1\\height}\\faExternalLink }}{}
+    \\resumeItemListStart
+    ${p.bullets.map((b) => `\\resumeItem{${b}}`).join("\n  ")}
+    \\resumeItemListEnd
+    \\vspace{-10pt}
     `
+    )
+    .join("\n");
 
+    const internLatex = internships
+    .map(
+        (i) => `
+    \\resumeSubheading
+    {${i.company}}{${i.startDate} -- ${i.endDate}}
+    {\\underline{${i.role}}}{${i.location}}
+    \\resumeItemListStart
+    ${i.bullets.map((b) => `\\resumeItem{${b}}`).join("\n    ")}
+    \\resumeItemListEnd
+    `
+    )
+    .join("\n");
+
+    const extracurricularLatex = extracurricular
+    .map(
+        (e) => `
+    \\resumeSubheading{${e.org}}{${e.dateRange}}{\\underline{${e.role}}}{${e.location}}
+    \\resumeItemListStart
+    ${e.bullets.map((b) => `\\resumeItem{${b}}`).join("\n    ")}
+    \\resumeItemListEnd
+    `
+    )
+    .join("\n");
+
+    const certsLatex = certifications
+    .map(
+        (c, i) =>
+        `$\\sbullet[.75] \\hspace{0.1cm}$ {\\href{${c.link || "#"}}{${c.name}}}`
+    )
+    .join(" \\hspace{1cm}\n");
+
+    const skillsLatex = skills
+    .slice(0, 4)
+    .map((s) => `\\item ${s}`)
+    .join("\n            ");
+
+    return String.raw`\documentclass[letterpaper,11pt]{article}
+
+    \usepackage{latexsym}
+    \usepackage[empty]{fullpage}
+    \usepackage{titlesec}
+    \usepackage{marvosym}
+    \usepackage[usenames,dvipsnames]{color}
+    \usepackage{verbatim}
+    \usepackage{enumitem}
+    \usepackage[hidelinks]{hyperref}
+    \usepackage[english]{babel}
+    \usepackage{tabularx}
+    \usepackage{fontawesome5}
+    \usepackage{multicol}
+    \usepackage{graphicx}
+    \setlength{\multicolsep}{-3.0pt}
+    \setlength{\columnsep}{-1pt}
+    \input{glyphtounicode}
+
+    \RequirePackage{tikz}
+    \RequirePackage{xcolor}
+    \RequirePackage{fontawesome}
+    \usepackage{tikz}
+    \usetikzlibrary{svg.path}
+
+    \definecolor{cvblue}{HTML}{0E5484}
+    \definecolor{black}{HTML}{130810}
+    \definecolor{darkcolor}{HTML}{0F4539}
+    \definecolor{cvgreen}{HTML}{3BD80D}
+    \definecolor{taggreen}{HTML}{00E278}
+    \definecolor{SlateGrey}{HTML}{2E2E2E}
+    \definecolor{LightGrey}{HTML}{666666}
+    \colorlet{name}{black}
+    \colorlet{tagline}{darkcolor}
+    \colorlet{heading}{darkcolor}
+    \colorlet{headingrule}{cvblue}
+    \colorlet{accent}{darkcolor}
+    \colorlet{emphasis}{SlateGrey}
+    \colorlet{body}{LightGrey}
+
+    \addtolength{\oddsidemargin}{-0.6in}
+    \addtolength{\evensidemargin}{-0.5in}
+    \addtolength{\textwidth}{1.19in}
+    \addtolength{\topmargin}{-.7in}
+    \addtolength{\textheight}{1.4in}
+
+    \urlstyle{same}
+    \raggedbottom
+    \raggedright
+    \setlength{\tabcolsep}{0in}
+
+    \titleformat{\section}{
+    \vspace{-4pt}\scshape\raggedright\large\bfseries
+    }{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+    \pdfgentounicode=1
+
+    \newcommand{\resumeItem}[1]{\item\small{{#1 \vspace{-2pt}}}}
+    \newcommand{\resumeSubheading}[4]{
+    \vspace{-2pt}\item
+    \begin{tabular*}{1.0\textwidth}[t]{l@{\extracolsep{\fill}}r}
+        \textbf{\large#1} & \textbf{\small #2} \\
+        \textit{\large#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+    }
+    \newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{1.001\textwidth}{l@{\extracolsep{\fill}}r}
+        \small#1 & \textbf{\small #2}\\
+    \end{tabular*}\vspace{-7pt}
+    }
+    \newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+    \renewcommand\labelitemi{$\vcenter{\hbox{\tiny$\bullet$}}$}
+    \renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+    \newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.0in, label={}]}
+    \newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+    \newcommand{\resumeItemListStart}{\begin{itemize}}
+    \newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+    \newcommand\sbullet[1][.5]{\mathbin{\vcenter{\hbox{\scalebox{#1}{$\bullet$}}}}}
+
+    \begin{document}
+
+    %----------HEADING----------
+    \begin{center}
+    {\Huge \scshape ${name}} \\ \vspace{1pt}
+    ${city} \\ \vspace{1pt}
+    \small \href{tel:${phone}}{\raisebox{-0.1\height}\faPhone\ \underline{${phone}} ~}
+    \href{mailto:${email}}{\raisebox{-0.2\height}\faEnvelope\ \underline{${email}}} ~
+    \href{${linkedin}}{\raisebox{-0.2\height}\faLinkedinSquare\ \underline{LinkedIn}} ~
+    \href{${github}}{\raisebox{-0.2\height}\faGithub\ \underline{GitHub}}
+    \vspace{-8pt}
+    \end{center}
+
+    %-----------EDUCATION-----------
+    \section{EDUCATION}
+    \resumeSubHeadingListStart
+    \resumeSubheading
+        {${edu.university || ""}}{${edu.startYear || ""} -- ${edu.endYear || ""}}
+        {${edu.degree || ""} - \textbf{CGPA} - \textbf{${edu.cgpa || ""}}}{${edu.location || ""}}
+    \resumeSubHeadingListEnd
+
+    \resumeSubHeadingListStart
+    \resumeSubheading
+        {${edu2.university || ""}}{${edu2.startYear || ""} -- ${edu2.endYear || ""}}
+        {${edu2.degree || ""} - \textbf{Percentage} - \textbf{${edu2.percentage || ""}}}{${edu2.location || ""}}
+    \resumeSubHeadingListEnd
+
+    %-----------SKILLS-----------
+    \section{SKILLS}
+    \begin{multicols}{4}
+        \begin{itemize}[itemsep=-2pt, parsep=5pt]
+            ${skillsLatex}
+        \end{itemize}
+    \end{multicols}
+    \vspace*{2.0\multicolsep}
+
+    %-----------PROJECTS-----------
+    \section{PROJECTS}
+    \vspace{-5pt}
+    \resumeSubHeadingListStart
+    ${projectsLatex}
+    \resumeSubHeadingListEnd
+    \vspace{-12pt}
+
+    %-----------INTERNSHIP-----------
+    \section{INTERNSHIP}
+    \resumeSubHeadingListStart
+    ${internLatex}
+    \resumeSubHeadingListEnd
+    \vspace{-12pt}
+
+    %-----------TECHNICAL SKILLS-----------
+    \section{TECHNICAL SKILLS}
+    \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+        \textbf{\normalsize{Languages:}}{ \normalsize{${languages}}} \\
+        \textbf{\normalsize{Developer Tools:}}{ \normalsize{${tools}}} \\
+        \textbf{\normalsize{Technologies/Frameworks:}}{\normalsize{ ${frameworks}}} \\
+    }}
+    \end{itemize}
+    \vspace{-15pt}
+
+    %-----------EXTRACURRICULAR-----------
+    \section{EXTRACURRICULAR}
+    \resumeSubHeadingListStart
+    ${extracurricularLatex}
+    \resumeSubHeadingListEnd
+    \vspace{-11pt}
+
+    %-----------CERTIFICATIONS-----------
+    \section{CERTIFICATIONS}
+    ${certsLatex}
+
+    \end{document}`;
+    };
+    const prompt = `
+    You are an ATS resume optimizer.
+
+    Your task:
+    - Improve the resume content for ATS optimization
+    - Return ONLY a valid JSON object with the improved data
+    - No markdown, no backticks, no explanations
+
+    INPUT RESUME JSON:
+    ${JSON.stringify(extractedData, null, 2)}
+
+    JOB DESCRIPTION:
+    ${jobDescription || "Not provided"}
+
+    SELF DESCRIPTION:
+    ${selfDescription || "Not provided"}
+
+    RULES:
+    - Return ONLY JSON
+    - Do not add fake data
+    - Do not remove any fields
+    - Keep exact same JSON structure as input
+
+    CONTENT RULES:
+    - Experience/Project bullets: Action Verb + Task + Tech + Impact
+    - Skills: reorder by job description relevance, same skills only
+    - Certifications/Extracurricular: keep as-is
+
+    Return JSON matching this structure EXACTLY:
+    {
+    "name": "",
+    "phone": "",
+    "email": "",
+    "linkedin": "",
+    "github": "",
+    "city": "",
+    "education": [
+    {
+        "university": "",
+        "degree": "",
+        "cgpa": "",
+        "percentage": "",
+        "startYear": "",
+        "endYear": "",
+        "location": ""
+    }
+    ],
+    "skills": ["", "", "", ""],
+    "projects": [
+    {
+        "name": "",
+        "url": "",
+        "bullets": ["", ""]
+    }
+    ],
+    "internships": [
+    {
+        "company": "",
+        "role": "",
+        "startDate": "",
+        "endDate": "",
+        "location": "",
+        "bullets": ["", ""]
+    }
+    ],
+    "languages": "",
+    "tools": "",
+    "frameworks": "",
+    "extracurricular": [
+    {
+        "org": "",
+        "role": "",
+        "dateRange": "",
+        "location": "",
+        "bullets": [""]
+    }
+    ],
+    "certifications": [
+    {
+        "name": "",
+        "link": ""
+    }
+    ]
+    }
+    `;
+    // 1. Get optimized data from AI
+const aiResponse = await callClaudeAPI(prompt);
+const cleanJson = aiResponse.replace(/```json|```/g, "").trim();
+const optimizedData = JSON.parse(cleanJson);
+
+// 2. Inject into LaTeX template (no AI needed for this step)
+const latexCode = getLatexTemplate(optimizedData);
+
+// 3. Send latexCode to your PDF compiler
     const response = await client.chat.completions.create({
         model,
         max_tokens: MODEL_MAX_TOKENS[model] ?? 4096, // ✅ FIX 8: was hardcoded 4096 for all models

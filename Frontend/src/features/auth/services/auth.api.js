@@ -1,7 +1,7 @@
 import axios from "axios"
 
 const api = axios.create({
-    baseURL: 'http://localhost:3200',
+    baseURL: 'https://gen-ai-job-preparation-web-application-1.onrender.com',
     withCredentials: true
 })
 
