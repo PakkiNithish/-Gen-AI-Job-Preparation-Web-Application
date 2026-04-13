@@ -38,10 +38,14 @@ async function registerUserController(req, resp) {
         expiresIn: "1d"
     }
     )
-    resp.cookie("token",token)
+    resp.cookie("token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none"
+    })
     resp.status(201).json({
-        message:"user registered successfully",
-        user:{
+        message: "user registered successfully",
+        user: {
             id: user._id,
             username: user.username,
             email: user.email
@@ -57,16 +61,16 @@ async function registerUserController(req, resp) {
 
 async function loginUserController(req, resp) {
     const { email, password } = req.body
-    const user = await userModel.findOne({email})
-    if(!user){
+    const user = await userModel.findOne({ email })
+    if (!user) {
         return resp.status(400).json({
-            message:"Invalid email"
+            message: "Invalid email"
         })
     }
-    const isPassValid = await bcrypt.compare(password,user.password)
-    if(!isPassValid){
+    const isPassValid = await bcrypt.compare(password, user.password)
+    if (!isPassValid) {
         return resp.status(400).json({
-            message:"Invalid Password"
+            message: "Invalid Password"
         })
     }
     const token = jwt.sign(
@@ -77,10 +81,14 @@ async function loginUserController(req, resp) {
         expiresIn: "1d"
     }
     )
-    resp.cookie("token",token)
+    resp.cookie("token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none"
+    })
     resp.status(201).json({
-        message:"user logged in successfully",
-        user:{
+        message: "user logged in successfully",
+        user: {
             id: user._id,
             username: user.username,
             email: user.email
@@ -93,12 +101,16 @@ async function loginUserController(req, resp) {
  * @description clear token from user cookie and add token in black-list
  */
 
-async function logutUserController(req, resp){
+async function logutUserController(req, resp) {
     const token = req.cookies.token
-    if(token){
-        await tokenBlacklistModel.create({token})
+    if (token) {
+        await tokenBlacklistModel.create({ token })
     }
-    resp.clearCookie("token")
+    resp.clearCookie("token", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none"
+    })
     resp.status(200).json({
         message: "User logged out successfully"
     })
@@ -112,8 +124,8 @@ async function logutUserController(req, resp){
 async function getMeController(req, resp) {
     const user = await userModel.findById(req.user.id)
     resp.status(200).json({
-        message:"User details fetched successfully",
-        user:{
+        message: "User details fetched successfully",
+        user: {
             id: user._id,
             userName: user.username,
             email: user.email
