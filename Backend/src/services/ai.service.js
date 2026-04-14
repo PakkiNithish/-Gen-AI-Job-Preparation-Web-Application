@@ -333,29 +333,42 @@ ${safeSelfDesc}`;
 
     throw new Error("All Groq models exhausted for report generation.");
 }
+const chromium = require('@sparticuz/chromium');
+const puppeteerCore = require('puppeteer-core');
 
 async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch({
-        headless: "new",
-        args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    const isLocal = process.env.NODE_ENV !== 'production';
+
+    const browser = await puppeteerCore.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: isLocal
+            ? undefined
+            : await chromium.executablePath(),
+        headless: chromium.headless,
     });
-    
+
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
     await page.addStyleTag({
-    content: `
-    body {
-      line-height: 1.2; /* adjust this value */
-    }
-    `
-});
+        content: `
+            body {
+                line-height: 1.2;
+            }
+        `
+    });
+
     const pdfBuffer = await page.pdf({
         format: 'A4',
+        printBackground: true,
         margin: { top: '10mm', bottom: '20mm', left: '15mm', right: '15mm' },
     });
+
     await browser.close();
     return pdfBuffer;
 }
+
 
 async function detectResumeStyle(resumeText, model) {
     const prompt = `Analyze this resume text and detect its layout and style characteristics.
@@ -510,141 +523,141 @@ async function enhanceResumeData(extractedData, jobDescription, selfDescription,
     //     - Do NOT add fake experience or skills
     //     - Return ONLY valid JSON with the exact same structure as input. No markdown, no code fences.`;
 
-//     const prompt = `
-// Enhance and optimize this resume to be ATS-friendly, keyword-optimized, and professionally structured while preserving the candidate's authentic experience.
+    //     const prompt = `
+    // Enhance and optimize this resume to be ATS-friendly, keyword-optimized, and professionally structured while preserving the candidate's authentic experience.
 
-// Resume Data:
-// ${JSON.stringify(extractedData, null, 2)}
+    // Resume Data:
+    // ${JSON.stringify(extractedData, null, 2)}
 
-// Job Description:
-// ${jobDescription || "Not provided"}
+    // Job Description:
+    // ${jobDescription || "Not provided"}
 
-// Self Description:
-// ${selfDescription || "Not provided"}
+    // Self Description:
+    // ${selfDescription || "Not provided"}
 
-// Goals:
-// - Improve clarity, impact, and ATS compatibility
-// - Align resume with job description using relevant keywords
-// - Maintain truthfulness — DO NOT invent experience, tools, or skills
+    // Goals:
+    // - Improve clarity, impact, and ATS compatibility
+    // - Align resume with job description using relevant keywords
+    // - Maintain truthfulness — DO NOT invent experience, tools, or skills
 
-// Strict Rules:
-// 1. Output must be ONLY valid JSON with the EXACT same structure as input
-// 2. Do NOT add or remove sections
-// 3. Do NOT fabricate experience, metrics, or skills
-// 4. Improve wording, not meaning
+    // Strict Rules:
+    // 1. Output must be ONLY valid JSON with the EXACT same structure as input
+    // 2. Do NOT add or remove sections
+    // 3. Do NOT fabricate experience, metrics, or skills
+    // 4. Improve wording, not meaning
 
-// ATS Optimization Rules:
-// - Use standard section titles (e.g., "Summary", "Experience", "Skills", "Education")
-// - Avoid special characters, icons, or decorative formatting
-// - Use simple, clean, recruiter-friendly language
-// - Ensure consistent tense (past for previous roles, present for current role)
+    // ATS Optimization Rules:
+    // - Use standard section titles (e.g., "Summary", "Experience", "Skills", "Education")
+    // - Avoid special characters, icons, or decorative formatting
+    // - Use simple, clean, recruiter-friendly language
+    // - Ensure consistent tense (past for previous roles, present for current role)
 
-// Summary/Objective:
-// - Rewrite to align strongly with the job description
-// - Include 2–4 key skills or keywords from the job description
-// - Keep it concise (3–4 lines max)
-// - Focus on value proposition
+    // Summary/Objective:
+    // - Rewrite to align strongly with the job description
+    // - Include 2–4 key skills or keywords from the job description
+    // - Keep it concise (3–4 lines max)
+    // - Focus on value proposition
 
-// Experience Section:
-// - Rewrite bullet points using this structure:
-// → Action Verb + Task + Tool/Skill + Impact (with metrics if available or logically inferred)
-// - Start each bullet with strong action verbs (e.g., Built, Led, Optimized, Developed)
-// - Add measurable impact where reasonable (%, time saved, performance improvement)
-// - Prioritize achievements over responsibilities
+    // Experience Section:
+    // - Rewrite bullet points using this structure:
+    // → Action Verb + Task + Tool/Skill + Impact (with metrics if available or logically inferred)
+    // - Start each bullet with strong action verbs (e.g., Built, Led, Optimized, Developed)
+    // - Add measurable impact where reasonable (%, time saved, performance improvement)
+    // - Prioritize achievements over responsibilities
 
-// Skills Section:
-// - Reorder skills to match job description relevance
-// - Group logically (e.g., Languages, Frameworks, Tools)
-// - Ensure important keywords from job description appear if already present in resume
+    // Skills Section:
+    // - Reorder skills to match job description relevance
+    // - Group logically (e.g., Languages, Frameworks, Tools)
+    // - Ensure important keywords from job description appear if already present in resume
 
-// Keyword Optimization:
-// - Incorporate relevant keywords naturally from job description
-// - Avoid keyword stuffing
-// - Ensure ATS readability
+    // Keyword Optimization:
+    // - Incorporate relevant keywords naturally from job description
+    // - Avoid keyword stuffing
+    // - Ensure ATS readability
 
-// Final Output:
-// - Return ONLY JSON
-// - Keep formatting clean and consistent
-// - No markdown, no explanations
-// `;
-//     const prompt = `
-//         You are an ATS resume optimizer.
+    // Final Output:
+    // - Return ONLY JSON
+    // - Keep formatting clean and consistent
+    // - No markdown, no explanations
+    // `;
+    //     const prompt = `
+    //         You are an ATS resume optimizer.
 
-// Your task:
-// Improve resume content but DO NOT design layout.
+    // Your task:
+    // Improve resume content but DO NOT design layout.
 
-// Return ONLY valid JSON matching this EXACT structure.
-// Do not add fields. Do not remove fields.
+    // Return ONLY valid JSON matching this EXACT structure.
+    // Do not add fields. Do not remove fields.
 
-// IMPORTANT:
-// This JSON will be rendered using a fixed ATS resume template.
-// Only improve wording and keyword optimization.
+    // IMPORTANT:
+    // This JSON will be rendered using a fixed ATS resume template.
+    // Only improve wording and keyword optimization.
 
-// Input Resume JSON:
-// ${JSON.stringify(extractedData, null, 2)}
+    // Input Resume JSON:
+    // ${JSON.stringify(extractedData, null, 2)}
 
-// Job Description:
-// ${jobDescription || "Not provided"}
+    // Job Description:
+    // ${jobDescription || "Not provided"}
 
-// Self Description:
-// ${selfDescription || "Not provided"}
+    // Self Description:
+    // ${selfDescription || "Not provided"}
 
-// Rules:
+    // Rules:
 
-// * Return ONLY JSON
-// * Keep exact structure
-// * No markdown
-// * No explanations
-// * No new sections
-// * No fake experience
-// * No special formatting
+    // * Return ONLY JSON
+    // * Keep exact structure
+    // * No markdown
+    // * No explanations
+    // * No new sections
+    // * No fake experience
+    // * No special formatting
 
-// Content Rules:
+    // Content Rules:
 
-// Summary:
+    // Summary:
 
-// * 3–4 lines
-// * Include job description keywords
-// * Professional tone
+    // * 3–4 lines
+    // * Include job description keywords
+    // * Professional tone
 
-// Experience / Projects:
-// Rewrite bullets using:
-// Action Verb + Task + Tech + Impact
+    // Experience / Projects:
+    // Rewrite bullets using:
+    // Action Verb + Task + Tech + Impact
 
-// Skills:
+    // Skills:
 
-// * Reorder based on job description relevance
-// * Keep same skills only
+    // * Reorder based on job description relevance
+    // * Keep same skills only
 
-// Output:
-// Return ONLY JSON
-//     `
-// Store the LaTeX template as a separate string to avoid escaping issues
+    // Output:
+    // Return ONLY JSON
+    //     `
+    // Store the LaTeX template as a separate string to avoid escaping issues
     const getLatexTemplate = (data) => {
-    const {
-    name = "",
-    phone = "",
-    email = "",
-    linkedin = "",
-    github = "",
-    city = "",
-    education = [],
-    skills = [],
-    projects = [],
-    internships = [],
-    languages = "",
-    tools = "",
-    frameworks = "",
-    extracurricular = [],
-    certifications = [],
-    } = data;
+        const {
+            name = "",
+            phone = "",
+            email = "",
+            linkedin = "",
+            github = "",
+            city = "",
+            education = [],
+            skills = [],
+            projects = [],
+            internships = [],
+            languages = "",
+            tools = "",
+            frameworks = "",
+            extracurricular = [],
+            certifications = [],
+        } = data;
 
-    const edu = education[0] || {};
-    const edu2 = education[1] || {};
+        const edu = education[0] || {};
+        const edu2 = education[1] || {};
 
-    const projectsLatex = projects
-    .map(
-        (p) => `
+        const projectsLatex = projects
+            .map(
+                (p) => `
     \\resumeProjectHeading
     {\\textbf{\\large{\\underline{${p.name}}}} \\href{${p.url || "#"}}{\\raisebox{-0.1\\height}\\faExternalLink }}{}
     \\resumeItemListStart
@@ -652,12 +665,12 @@ async function enhanceResumeData(extractedData, jobDescription, selfDescription,
     \\resumeItemListEnd
     \\vspace{-10pt}
     `
-    )
-    .join("\n");
+            )
+            .join("\n");
 
-    const internLatex = internships
-    .map(
-        (i) => `
+        const internLatex = internships
+            .map(
+                (i) => `
     \\resumeSubheading
     {${i.company}}{${i.startDate} -- ${i.endDate}}
     {\\underline{${i.role}}}{${i.location}}
@@ -665,33 +678,33 @@ async function enhanceResumeData(extractedData, jobDescription, selfDescription,
     ${i.bullets.map((b) => `\\resumeItem{${b}}`).join("\n    ")}
     \\resumeItemListEnd
     `
-    )
-    .join("\n");
+            )
+            .join("\n");
 
-    const extracurricularLatex = extracurricular
-    .map(
-        (e) => `
+        const extracurricularLatex = extracurricular
+            .map(
+                (e) => `
     \\resumeSubheading{${e.org}}{${e.dateRange}}{\\underline{${e.role}}}{${e.location}}
     \\resumeItemListStart
     ${e.bullets.map((b) => `\\resumeItem{${b}}`).join("\n    ")}
     \\resumeItemListEnd
     `
-    )
-    .join("\n");
+            )
+            .join("\n");
 
-    const certsLatex = certifications
-    .map(
-        (c, i) =>
-        `$\\sbullet[.75] \\hspace{0.1cm}$ {\\href{${c.link || "#"}}{${c.name}}}`
-    )
-    .join(" \\hspace{1cm}\n");
+        const certsLatex = certifications
+            .map(
+                (c, i) =>
+                    `$\\sbullet[.75] \\hspace{0.1cm}$ {\\href{${c.link || "#"}}{${c.name}}}`
+            )
+            .join(" \\hspace{1cm}\n");
 
-    const skillsLatex = skills
-    .slice(0, 4)
-    .map((s) => `\\item ${s}`)
-    .join("\n            ");
+        const skillsLatex = skills
+            .slice(0, 4)
+            .map((s) => `\\item ${s}`)
+            .join("\n            ");
 
-    return String.raw`\documentclass[letterpaper,11pt]{article}
+        return String.raw`\documentclass[letterpaper,11pt]{article}
 
     \usepackage{latexsym}
     \usepackage[empty]{fullpage}
@@ -932,14 +945,14 @@ async function enhanceResumeData(extractedData, jobDescription, selfDescription,
     }
     `;
     // 1. Get optimized data from AI
-const aiResponse = await callClaudeAPI(prompt);
-const cleanJson = aiResponse.replace(/```json|```/g, "").trim();
-const optimizedData = JSON.parse(cleanJson);
+    const aiResponse = await callClaudeAPI(prompt);
+    const cleanJson = aiResponse.replace(/```json|```/g, "").trim();
+    const optimizedData = JSON.parse(cleanJson);
 
-// 2. Inject into LaTeX template (no AI needed for this step)
-const latexCode = getLatexTemplate(optimizedData);
+    // 2. Inject into LaTeX template (no AI needed for this step)
+    const latexCode = getLatexTemplate(optimizedData);
 
-// 3. Send latexCode to your PDF compiler
+    // 3. Send latexCode to your PDF compiler
     const response = await client.chat.completions.create({
         model,
         max_tokens: MODEL_MAX_TOKENS[model] ?? 4096, // ✅ FIX 8: was hardcoded 4096 for all models
