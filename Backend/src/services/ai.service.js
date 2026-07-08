@@ -1,6 +1,6 @@
 const Groq = require("groq-sdk");
 const { z } = require("zod");          // ✅ FIX 1: removed unused `config` import from zod
-const puppeteer = require("puppeteer"); // ✅ FIX 2: removed unused `zodToJsonSchema` import
+
 
 if (!process.env.GROQ_API_KEY) {
     console.error("GROQ_API_KEY is not set in environment variables");
